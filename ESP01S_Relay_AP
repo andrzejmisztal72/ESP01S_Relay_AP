@@ -1,0 +1,64 @@
+// Przełącznik pracujący w trybie ACCESS POINT oparty o jednoprzekaźnikowy moduł ESP01S Relay
+// Zasilanie układu zasilaczem Hi-Link 230V/5V ~0,6A
+
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+ 
+const char *ssid = "********";             // W tym miejscu wpisujemy jak ma się nazywać nasza sieć AP
+const char *password = "********";        // Podajemy hasło do tej sieci
+#define RELAY 0
+
+WiFiServer server(80);
+ 
+void handleRoot() {
+}
+ 
+void setup() {
+ 
+  Serial.begin(115200);
+ 
+  WiFi.softAP(ssid, password);
+ 
+  Serial.println();
+  Serial.print("Server IP address: ");
+  Serial.println(WiFi.softAPIP());
+  Serial.print("Server MAC address: ");
+  Serial.println(WiFi.softAPmacAddress());
+ 
+  server.begin();
+
+  delay(500);
+  pinMode(RELAY, OUTPUT);
+  delay(100);
+  digitalWrite(RELAY, LOW);
+ 
+  Serial.println("Server listening");
+}
+ 
+void loop() {
+ WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+  String req = client.readStringUntil('\r');
+  client.flush();
+  
+  if (req.indexOf("/relay=on") != -1)
+  digitalWrite(RELAY, LOW);
+  else if (req.indexOf("relay=off") != -1)
+  digitalWrite(RELAY, HIGH);
+  else if (req.indexOf("/") != -1);
+  else {
+    client.stop();
+    return;
+  }
+  client.flush();
+
+  String HTML = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<!DOCTYPE HTML>\r\n<html> <center><h1>IoT  Inteligentna listwa ~230V</h2> <h3>Sterowanie zasilaniem</h2>";
+  HTML += "<center><h2>Stan zasilania listwy:";
+  HTML += (digitalRead(RELAY))?"OFF":"ON</h1>";
+  HTML += "<h2>Power Line <button onclick=\"window.location.href='/relay=on'\">- ON -</button>&nbsp;<button onclick=\"window.location.href='/relay=off'\">- OFF -</button></h1></html></center>";
+
+  client.print(HTML);
+  delay(10);
+}
